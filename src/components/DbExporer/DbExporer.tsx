@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Button,
     Card,
@@ -8,6 +8,8 @@ import {
     List,
     ListItem,
     ListItemText,
+    Box,
+    makeStyles,
 } from '@material-ui/core';
 import { DataGrid, ColDef } from '@material-ui/data-grid';
 import { ICollection, IDatabase, IRecord } from '@chunchun-db/client';
@@ -16,6 +18,15 @@ import { DbService } from '../../services/DbService';
 
 type DbDictionary = { [key: string]: IDatabase };
 type CollectionsDictionary = { [key: string]: ICollection<IRecord> };
+
+const useStyles = makeStyles({
+    container: {
+        width: '100%',
+        flex: 1,
+        backgroundColor: 'white',
+        padding: '1em',
+    },
+});
 
 export const DbExporer = () => {
     const [data, setData] = useState<IRecord[]>([]);
@@ -75,66 +86,73 @@ export const DbExporer = () => {
     }, [selectedCollection]);
 
     const columns: ColDef[] = useMemo(() => {
-        return Object.keys(data[0] || {}).map((key) => ({
+        if (!data.length) {
+            return [];
+        }
+
+        const cols = data.map((item, index) => [Object.keys(item).length, index]);
+        cols.sort((a, b) => b[0] - a[0]);
+        const mostColumnsItemIndex = cols[0][1];
+
+        return Object.keys(data[mostColumnsItemIndex] || {}).map((key) => ({
             field: key,
             headerName: key,
             flex: 1,
         }));
     }, [data]);
 
+    const classNames = useStyles();
+
     return (
-        <Container>
-            <Card>
-                <CardContent>
-                    <Grid container>
-                        {!isNavHidden && (
-                            <Grid item xs={4}>
-                                <Grid container>
-                                    <Grid item xs>
-                                        <List>
-                                            {dbList.map((dbname) => (
-                                                <ListItem
-                                                    key={dbname}
-                                                    button
-                                                    selected={dbname === selectedDb}
-                                                    onClick={() => setSelectedDb(dbname)}
-                                                >
-                                                    <ListItemText>{dbname}</ListItemText>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </Grid>
-                                    <Grid item xs>
-                                        <List>
-                                            {collections.map((colName) => (
-                                                <ListItem
-                                                    key={colName}
-                                                    button
-                                                    selected={colName === selectedCollection}
-                                                    onClick={() => setSelectedCollection(colName)}
-                                                >
-                                                    <ListItemText>{colName}</ListItemText>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </Grid>
-                                </Grid>
+        <Grid container direction='column' className={classNames.container}>
+            <Grid container style={{ flex: 1 }}>
+                {!isNavHidden && (
+                    <Grid item xs={4}>
+                        <Grid container>
+                            <Grid item xs>
+                                <List>
+                                    {dbList.map((dbname) => (
+                                        <ListItem
+                                            key={dbname}
+                                            button
+                                            selected={dbname === selectedDb}
+                                            onClick={() => setSelectedDb(dbname)}
+                                        >
+                                            <ListItemText>{dbname}</ListItemText>
+                                        </ListItem>
+                                    ))}
+                                </List>
                             </Grid>
-                        )}
-                        <Grid>
-                            <Button onClick={toggleHidden}>{isNavHidden ? 'Show' : 'Hide'}</Button>
-                        </Grid>
-                        <Grid xs item style={{ height: '40em' }}>
-                            <DataGrid
-                                columns={columns}
-                                rows={data}
-                                checkboxSelection
-                                density='compact'
-                            />
+                            <Grid item xs>
+                                <List>
+                                    {collections.map((colName) => (
+                                        <ListItem
+                                            key={colName}
+                                            button
+                                            selected={colName === selectedCollection}
+                                            onClick={() => setSelectedCollection(colName)}
+                                        >
+                                            <ListItemText>{colName}</ListItemText>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Grid>
                         </Grid>
                     </Grid>
-                </CardContent>
-            </Card>
-        </Container>
+                )}
+                <Grid>
+                    <Button onClick={toggleHidden}>{isNavHidden ? 'Show' : 'Hide'}</Button>
+                </Grid>
+                <Grid xs item>
+                    <DataGrid
+                        columns={columns}
+                        rows={data}
+                        checkboxSelection
+                        density='compact'
+                        pageSize={25}
+                    />
+                </Grid>
+            </Grid>
+        </Grid>
     );
 };
